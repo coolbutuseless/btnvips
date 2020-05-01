@@ -1,0 +1,50 @@
+---
+title: "Vips datatypes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vip datatypes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+library(dplyr)
+library(purrr)
+library(btnvips)
+```
+
+
+# Across all command line arguments what types are present? (alphabetical)
+
+```{r echo = FALSE, warning = FALSE}
+btnvips:::method_info %>%
+  map('details') %>%
+  flatten() %>%
+  map_chr('type') %>%
+  tibble() %>%
+  set_names("type") %>%
+  count(type) %>%
+  as.data.frame() %>%
+  knitr::kable()
+```
+
+
+# Across all command line arguments what types are present? (by count)
+
+```{r echo = FALSE, warning = FALSE}
+btnvips:::method_info %>%
+  map('details') %>%
+  flatten() %>%
+  map_chr('type') %>%
+  tibble() %>%
+  set_names("type") %>%
+  count(type) %>%
+  as.data.frame() %>%
+  arrange(desc(n)) %>%
+  knitr::kable()
+```

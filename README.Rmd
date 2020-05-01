@@ -1,0 +1,236 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = FALSE,
+  comment = "  ",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+
+if (FALSE) {
+  pkgdown::build_site(override = list(destination = "../coolbutuseless.github.io/package/minisvg"))
+}
+```
+
+
+
+
+```{r echo = FALSE, eval = FALSE}
+# Quick logo generation. Borrowed heavily from Nick Tierney's Syn logo process
+library(magick)
+library(showtext)
+font_add_google("Abril Fatface", "gf")
+```
+
+
+```{r echo = FALSE, eval = FALSE}
+img <- image_read("man/figures/button.png")
+
+
+hexSticker::sticker(subplot  = img,
+                    s_x      = 1,
+                    s_y      = 1.2,
+                    s_width  = 1.5,
+                    s_height = 1.0,
+                    package  = "vips",
+                    p_x      = 1,
+                    p_y      = 0.5,
+                    p_color  = "#223344",
+                    p_family = "gf",
+                    p_size   = 9,
+                    h_size   = 1.2,
+                    h_fill   = "#ffffff",
+                    h_color  = "#223344",
+                    filename = "man/figures/logo.png")
+
+image_read("man/figures/logo.png")
+```
+
+
+
+
+
+# btnvips   <img src="man/figures/logo.png" align="right" height=230/>
+
+<!-- badges: start -->
+![](http://img.shields.io/badge/cool-useless-green.svg)
+![](http://img.shields.io/badge/button-verse-blue.svg)
+<!-- badges: end -->
+
+`btnvips` is an Rstats interface to [libvips](https://libvips.github.io/libvips/) on 
+the command line.
+
+Using `btnvips` the user can construct and execute `vips` on the command line in 
+a programmatic way.
+
+The **btn** in `btnvips` is pronounced "*button*" and stands for "better than 
+nothing".`btnvips` is a part of the ButtonVerse.
+
+
+
+### Features
+
+* Anything(?) you can do in command line vips, you can do in `btnvips`
+* Support for all ~270 commands
+* Tab-completion for command arguments
+* Sanity checks for calling syntax
+
+
+### Installation
+
+You can install `btnvips` from [github](https://github.com/coolbutuseless/btnvips) with:
+
+``` r
+# install.packages("remotes")
+# install.packages(c('R6', 'glue'))
+remotes::install_github("coolbutuseless/btnsystem")
+remotes::install_github("coolbutuseless/btnvips")
+```
+
+### Design choices:
+
+The interface mimics the vips command line very closely with direct 1-to-1 translations
+of all the command line arguments.  This is by design, so that 
+
+* if you're familiar already with vips on the command line, using `btnvips` should 
+  make some sort of sense
+* users should refer to [libvips documentation](https://libvips.github.io/)
+
+### Limitations/Notes
+
+* `btnvips` is really just a glorified called to `system2()`
+* If you're not familiar with `libvips` on the command line, this package isn't 
+  really going to help you learn
+* There is no functionality within `btnvips` for viewing images.  This is currently
+  because `libvips` itself isn't an image viewer.
+
+
+## Example image
+
+An example image is included in the package.  Because `vips` on the command line
+has no facility for actually *viewing* images, this vignette will use the `magick`
+package to read images into R and display them.
+
+```{r demo_image, out.width = "30%"}
+im_filename <- system.file("img", "magpie.jpg", package = 'btnvips')
+im <- magick::image_read(im_filename)
+im
+```
+
+
+
+## Example: Rotate an image
+
+This is a basic example which shows you how to rotate an image with `vips`
+
+```{r rotate, out.width="30%"}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Load vips, create a new object and ask for help on the 'rot' command
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+library(btnvips)
+v <- Vips$new()
+v$help('rot')
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Decide on the output file location
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tmp <- tempfile(fileext = ".jpg")
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create the command and view what it is going to do on the command line
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v$rot(in_ = im_filename, out = tmp, angle = 'd90')
+v
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Run the command.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v$run()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# View the file using image magick 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+magick::image_read(tmp)
+```
+
+
+
+## Example: Save a Deep Zoom image
+
+```{r deepzoom1}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create a new Vips object and a nominate a place to put the Deep Zoom images
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v <- Vips$new()
+# v$help('dzsave')
+dzi_root <- tempfile()
+dzi_dir <- paste0(dzi_root, "_files/")
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create the command for converting input to a deep zoom image
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v$dzsave(in_ = im_filename, filename = dzi_root, tile_size = 120, depth = 'onetile', centre = TRUE)
+v
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Run the command.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v$run()
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# List the files available in the Deep Zoom directory structures
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+list.files(dzi_dir, recursive = TRUE)
+```
+
+
+## Example: View a tileset of a Deep Zoom image
+
+
+```{r deepzoom2}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# For this Deep Zoom tileset, select all the images at Depth = 2 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+depth_2_images <- list.files(file.path(dzi_dir, 2), recursive = TRUE, full.names = TRUE)
+tmp_combined   <- tempfile(fileext = ".jpg")
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Create a command for joining all the images.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v$arrayjoin(in_ = vips_array(depth_2_images), out = tmp_combined, 
+            across = 3, background = vips_array(c(200, 200, 200)), shim = 10)
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# View the command we're about to run
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Run the command.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+v$run()
+```
+
+
+```{r deepzoom3, out.width="60%"}
+magick::image_read(tmp_combined)
+```
+
+
+
+
+
+
+## All included vips commands
+
+```{r}
+v <- Vips$new()
+v$commands()
+```
+
+
